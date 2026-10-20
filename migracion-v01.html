@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exportar datos v01 – Panel LAB (HT-RVP-09)</title>
+<style>
+    body { font-family: 'Segoe UI', Roboto, sans-serif; background: #e8f4fd; color: #1e293b; margin: 0; padding: 2rem 1rem; }
+    .caja { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 1.5rem 2rem; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+    h1 { font-size: 1.3rem; color: #0a1628; margin-top: 0; }
+    p, li { font-size: .95rem; line-height: 1.5; }
+    input { width: 100%; padding: .7rem; border: 2px solid #dce8f4; border-radius: 10px; font-size: 1rem; box-sizing: border-box; }
+    button { margin-top: 1rem; background: #1a8a9c; color: #fff; border: 0; border-radius: 30px; padding: .8rem 1.6rem; font-weight: 700; font-size: 1rem; cursor: pointer; }
+    button:disabled { background: #94a3b8; cursor: not-allowed; }
+    .res { background: #f0f7fc; border-radius: 10px; padding: .8rem 1rem; margin: 1rem 0; }
+    .aviso { color: #b45309; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="caja">
+    <h1>📦 Exportar los datos de la versión 01 de este equipo</h1>
+    <p>La versión 01 del Panel LAB guardaba las evaluaciones, la bitácora y el repositorio en el navegador de cada equipo. Esta página descarga esos datos en un archivo para que el Profesional SIG los cargue en la versión 02. <b>No borra nada</b> de este equipo.</p>
+    <p class="aviso">Ábrala en el mismo navegador y en la misma dirección donde se usaba la versión 01.</p>
+    <div class="res" id="resumen">Buscando datos...</div>
+    <label for="equipo"><b>Nombre de este equipo</b> (p. ej. PTAP-Analista o Sede-Laboratorio)</label>
+    <input id="equipo" placeholder="Nombre del equipo">
+    <button id="exportar" disabled>Descargar archivo de migración</button>
+    <p style="font-size:.8rem;color:#4a7a9c;margin-top:1.5rem">HT-RVP-09 · Herramienta de migración v01 → v02 · RED VITAL PAIPA S.A. E.S.P.</p>
+</div>
+<script>
+(function () {
+    function leer(k, def) { try { return JSON.parse(localStorage.getItem(k) || def); } catch (e) { return JSON.parse(def); } }
+    var datos = { items: leer('lab_res1619_items', '{}'), audit: leer('lab_res1619_audit', '[]'), repository: leer('lab_repository', '[]') };
+    var nItems = Object.keys(datos.items).length;
+    var nArch = Object.keys(datos.items).reduce(function (n, k) { return n + ((datos.items[k].archivos || []).length); }, 0);
+    var nDocs = datos.repository.filter(function (d) { return !d.esCarpeta; }).length;
+    var nCarp = datos.repository.length - nDocs;
+    var hay = nItems || datos.audit.length || datos.repository.length;
+    document.getElementById('resumen').innerHTML = hay
+        ? '✅ Se encontraron: <b>' + nItems + '</b> ítems evaluados (' + nArch + ' archivos), <b>' + datos.audit.length + '</b> registros de bitácora, <b>' + nDocs + '</b> documentos y <b>' + nCarp + '</b> carpetas.<br><small>Dirección: ' + location.host + '</small>'
+        : '⚪ No hay datos de la versión 01 en este navegador (dirección: ' + location.host + '). Si el panel se usaba en otro navegador u otra dirección, abra esta página allí.';
+    var btn = document.getElementById('exportar');
+    btn.disabled = !hay;
+    btn.onclick = function () {
+        var equipo = document.getElementById('equipo').value.trim();
+        if (equipo.length < 3) { alert('Escriba el nombre del equipo.'); return; }
+        var paquete = { formato: 'HT-RVP-09-v01-exportacion', equipo: equipo, exportadoEn: new Date().toLocaleString('es-CO'), origen: location.href, datos: datos };
+        var blob = new Blob([JSON.stringify(paquete)], { type: 'application/json' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'migracion-v01-' + equipo.replace(/[^A-Za-z0-9]+/g, '-') + '.json';
+        a.click();
+        document.getElementById('resumen').innerHTML += '<br><b>📥 Archivo descargado.</b> Entréguelo al Profesional SIG por un medio institucional.';
+    };
+})();
+</script>
+</body>
+</html>
